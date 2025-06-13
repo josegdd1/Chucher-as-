@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Calificadora de Chucherías</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #fff0f0;
+      color: #333;
+      margin: 0;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 650px;
+      margin: auto;
+      background: #fff;
+      padding: 25px;
+      border-radius: 15px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.1);
+    }
+
+    h1 {
+      text-align: center;
+      color: #cc0033;
+    }
+
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: bold;
+    }
+
+    input[type="text"], input[type="number"] {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      margin-top: 15px;
+      background-color: #cc0033;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 10px;
+      font-size: 15px;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+
+    .filters {
+      margin-top: 20px;
+      text-align: center;
+    }
+
+    .result {
+      margin-top: 30px;
+    }
+
+    .chuche-item {
+      background: #fff5f7;
+      padding: 15px;
+      border-radius: 12px;
+      border: 1px solid #eed6d9;
+      margin-bottom: 20px;
+      box-shadow: 0 0 6px rgba(0,0,0,0.05);
+    }
+
+    .chuche-item h3 {
+      margin: 0 0 10px;
+      color: #cc0033;
+    }
+
+    .btn-small {
+      font-size: 13px;
+      padding: 5px 10px;
+      margin-top: 10px;
+      margin-right: 5px;
+    }
+
+    .btn-edit {
+      background-color: #e75480;
+    }
+
+    .btn-delete {
+      background-color: #a50000;
+    }
+
+    .clear-btn {
+      background-color: #999;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Calificadora de Chucherías</h1>
+
+    <label for="nombre">Nombre de la chuchería:</label>
+    <input type="text" id="nombre" placeholder="Ej: Galleta Oreo" />
+
+    <label for="presentacion">Presentación (1-10):</label>
+    <input type="number" id="presentacion" min="1" max="10" />
+
+    <label for="sabor">Sabor (1-10):</label>
+    <input type="number" id="sabor" min="1" max="10" />
+
+    <label for="textura">Textura (1-10):</label>
+    <input type="number" id="textura" min="1" max="10" />
+
+    <label for="cantidad">Cantidad (1-10):</label>
+    <input type="number" id="cantidad" min="1" max="10" />
+
+    <button onclick="agregarChucheria()">Agregar Chuchería</button>
+    <button class="clear-btn" onclick="limpiarTodo()">Limpiar todo</button>
+
+    <div class="filters">
+      <button onclick="filtrar('reciente')">🕒 Más recientes</button>
+      <button onclick="filtrar('puntaje')">⭐ Más puntuación</button>
+    </div>
+
+    <div class="result" id="listaChucherias"></div>
+  </div>
+
+  <script>
+    let chucherias = JSON.parse(localStorage.getItem('chucherias')) || [];
+    let editandoIndice = null;
+
+    function agregarChucheria() {
+      const nombre = document.getElementById('nombre').value.trim();
+      const presentacion = parseFloat(document.getElementById('presentacion').value);
+      const sabor = parseFloat(document.getElementById('sabor').value);
+      const textura = parseFloat(document.getElementById('textura').value);
+      const cantidad = parseFloat(document.getElementById('cantidad').value);
+
+      if (!nombre || isNaN(presentacion) || isNaN(sabor) || isNaN(textura) || isNaN(cantidad)) {
+        alert('Por favor, completa todos los campos con valores válidos.');
+        return;
+      }
+
+      const promedio = ((presentacion + sabor + textura + cantidad) / 4).toFixed(2);
+      const fecha = new Date().toISOString();
+
+      const datos = {
+        nombre,
+        presentacion,
+        sabor,
+        textura,
+        cantidad,
+        promedio: parseFloat(promedio),
+        fecha
+      };
+
+      if (editandoIndice !== null) {
+        chucherias[editandoIndice] = datos;
+        editandoIndice = null;
+      } else {
+        chucherias.push(datos);
+      }
+
+      localStorage.setItem('chucherias', JSON.stringify(chucherias));
+      mostrarChucherias(chucherias);
+      limpiarInputs();
+    }
+
+    function mostrarChucherias(lista) {
+      const contenedor = document.getElementById('listaChucherias');
+      contenedor.innerHTML = "";
+
+      if (lista.length === 0) {
+        contenedor.innerHTML = "<p>No hay chucherías registradas aún.</p>";
+        return;
+      }
+
+      lista.forEach((chuche, index) => {
+        const item = document.createElement('div');
+        item.classList.add('chuche-item');
+        item.innerHTML = `
+          <h3>${chuche.nombre}</h3>
+          <p>Presentación: ${chuche.presentacion}</p>
+          <p>Sabor: ${chuche.sabor}</p>
+          <p>Textura: ${chuche.textura}</p>
+          <p>Cantidad: ${chuche.cantidad}</p>
+          <p><strong>Puntaje Final: ${chuche.promedio}</strong></p>
+          <small>Registrado: ${new Date(chuche.fecha).toLocaleString()}</small><br>
+          <button class="btn-small btn-edit" onclick="editarChucheria(${index})">Editar</button>
+          <button class="btn-small btn-delete" onclick="eliminarChucheria(${index})">Eliminar</button>
+        `;
+        contenedor.appendChild(item);
+      });
+    }
+
+    function limpiarInputs() {
+      document.getElementById('nombre').value = "";
+      document.getElementById('presentacion').value = "";
+      document.getElementById('sabor').value = "";
+      document.getElementById('textura').value = "";
+      document.getElementById('cantidad').value = "";
+    }
+
+    function limpiarTodo() {
+      if (confirm("¿Estás seguro de que quieres borrar todas las chucherías?")) {
+        localStorage.removeItem('chucherias');
+        chucherias = [];
+        mostrarChucherias(chucherias);
+      }
+    }
+
+    function eliminarChucheria(index) {
+      if (confirm("¿Eliminar esta chuchería?")) {
+        chucherias.splice(index, 1);
+        localStorage.setItem('chucherias', JSON.stringify(chucherias));
+        mostrarChucherias(chucherias);
+      }
+    }
+
+    function editarChucheria(index) {
+      const c = chucherias[index];
+      document.getElementById('nombre').value = c.nombre;
+      document.getElementById('presentacion').value = c.presentacion;
+      document.getElementById('sabor').value = c.sabor;
+      document.getElementById('textura').value = c.textura;
+      document.getElementById('cantidad').value = c.cantidad;
+      editandoIndice = index;
+      window.scrollTo(0, 0);
+    }
+
+    function filtrar(tipo) {
+      let copia = [...chucherias];
+      if (tipo === 'reciente') {
+        copia.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+      } else if (tipo === 'puntaje') {
+        copia.sort((a, b) => b.promedio - a.promedio);
+      }
+      mostrarChucherias(copia);
+    }
+
+    // Mostrar al cargar
+    mostrarChucherias(chucherias);
+  </script>
+</body>
+</html>
